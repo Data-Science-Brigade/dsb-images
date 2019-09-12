@@ -19,7 +19,7 @@ A place to maintain Docker images we use across projects
 For example:
 
   ```
-  cd pyspark-processing && docker build -t jonjoncardoso/pyspark-processing:latest
+  cd pyspark-image && docker build . -t jonjoncardoso/pyspark-image:latest
   ```
 
 3. Push to the repository:
@@ -31,7 +31,7 @@ For example:
 For example:
 
   ```
-  docker push jonjoncardoso:pyspark-processing:latest
+  docker push jonjoncardoso:pyspark-image:latest
   ```  
 
 ## More Info
