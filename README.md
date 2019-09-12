@@ -31,7 +31,7 @@ For example:
 For example:
 
   ```
-  docker push jonjoncardoso:pyspark-image:latest
+  docker push jonjoncardoso/pyspark-image:latest
   ```  
 
 ## More Info
