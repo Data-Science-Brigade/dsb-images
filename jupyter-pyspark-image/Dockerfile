@@ -215,7 +215,7 @@ RUN fix-permissions /etc/jupyter/
 
 # Spark dependencies
 ENV APACHE_SPARK_VERSION 2.4.4
-ENV HADOOP_VERSION 2.7 
+ENV HADOOP_VERSION 2.7
 
 RUN apt-get -y update && \
     apt-get install --no-install-recommends -y openjdk-8-jre-headless ca-certificates-java && \
@@ -232,9 +232,11 @@ ENV SPARK_HOME /usr/local/spark
 ENV PYTHONPATH $SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.7-src.zip
 ENV SPARK_OPTS --driver-java-options=-Xms1024M --driver-java-options=-Xmx4096M --driver-java-options=-Dlog4j.logLevel=info
 
+# Solve incompatibility problems with the version of Tornado and Jupyter Spark
+RUN pip uninstall -y tornado nbconvert jupyter-spark && \
+  pip install nbconvert==5.1.0 && \
+  pip install tornado==5.1.1 && \
+  pip install jupyter-spark
 
 # Switch back to jovyan to avoid accidental container runs as root
 USER $NB_UID
-
-
-
