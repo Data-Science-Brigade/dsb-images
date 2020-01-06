@@ -1,5 +1,6 @@
 ipdb==0.10.3
 spark-stratifier==0.1.5
+pyspark==2.4.1
 numpy==1.15.1
 scipy==1.1.0
 pandas==0.23.4
