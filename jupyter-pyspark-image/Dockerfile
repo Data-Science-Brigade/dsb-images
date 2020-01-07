@@ -203,15 +203,15 @@ RUN MPLBACKEND=Agg python -c "import matplotlib.pyplot" && \
 ENTRYPOINT ["tini", "-g", "--"]
 CMD ["start-notebook.sh"]
 
-# Add local files as late as possible to avoid cache busting
-COPY start.sh /usr/local/bin/
-COPY start-notebook.sh /usr/local/bin/
-COPY start-singleuser.sh /usr/local/bin/
-COPY jupyter_notebook_config.py /etc/jupyter/
+# Solve incompatibility problems with the version of Tornado and Jupyter Spark
+RUN pip uninstall -y tornado nbconvert jupyter-spark && \
+  pip install dask==2.9.1 && \
+  pip install nbconvert==5.1.0 && \
+  pip install tornado==5.1.1 && \
+  pip install jupyter-spark
 
 # Fix permissions on /etc/jupyter as root
 USER root
-RUN fix-permissions /etc/jupyter/
 
 # Spark dependencies
 ENV APACHE_SPARK_VERSION 2.4.4
@@ -232,14 +232,21 @@ ENV SPARK_HOME /usr/local/spark
 ENV PYTHONPATH $SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.7-src.zip
 ENV SPARK_OPTS --driver-java-options=-Xms1024M --driver-java-options=-Xmx4096M --driver-java-options=-Dlog4j.logLevel=info
 
-# Solve incompatibility problems with the version of Tornado and Jupyter Spark
-RUN pip uninstall -y tornado nbconvert jupyter-spark && \
-  pip install nbconvert==5.1.0 && \
-  pip install tornado==5.1.1 && \
-  pip install jupyter-spark
+# Switch back to jovyan to avoid accidental container runs as root
+USER $NB_UID
 
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Add local files as late as possible to avoid cache busting
+COPY start.sh /usr/local/bin/
+COPY start-notebook.sh /usr/local/bin/
+COPY start-singleuser.sh /usr/local/bin/
+COPY jupyter_notebook_config.py /etc/jupyter/
+
+# Fix permissions on /etc/jupyter as root
+USER root
+RUN fix-permissions /etc/jupyter/
 
 # Switch back to jovyan to avoid accidental container runs as root
 USER $NB_UID
