@@ -238,5 +238,8 @@ RUN pip uninstall -y tornado nbconvert jupyter-spark && \
   pip install tornado==5.1.1 && \
   pip install jupyter-spark
 
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
 # Switch back to jovyan to avoid accidental container runs as root
 USER $NB_UID
