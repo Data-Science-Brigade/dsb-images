@@ -1,5 +1,5 @@
 FROM debian:stretch
-LABEL maintainer="contato@datasciencebr.com"
+LABEL maintainer="Data Science Brigade <hello@dsbrigade.com>"
 LABEL inspired_by="https://github.com/gettyimages"
 
 RUN apt-get update --fix-missing && \
@@ -55,18 +55,24 @@ LANGUAGE=en_US.UTF-8
 
 ENV PATH=$CONDA_DIR/bin:$PATH
 
-ENV MINICONDA_VERSION 4.5.11
+ENV MINICONDA_VERSION=4.7.10 \
+    MINICONDA_MD5=1c945f2b3335c7b2b15130b1b2dc5cf4 \
+    CONDA_VERSION=4.7.12
 RUN cd /tmp && \
-    wget https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-    echo "e1045ee415162f944b6aebfe560b8fee *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    echo "${MINICONDA_MD5} *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
     /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
     rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    echo "conda ${CONDA_VERSION}" >> $CONDA_DIR/conda-meta/pinned && \
     $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
     $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
     $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
-    $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
+    if [ ! $PYTHON_VERSION = 'default' ]; then conda install --yes python=$PYTHON_VERSION; fi && \
+    conda list python | grep '^python ' | tr -s ' ' | cut -d '.' -f 1,2 | sed 's/$/.*/' >> $CONDA_DIR/conda-meta/pinned && \
+    $CONDA_DIR/bin/conda install --quiet --yes conda && \
     $CONDA_DIR/bin/conda update --all --quiet --yes && \
-    conda clean -tips
+    conda clean --all -f -y && \
+    rm -rf /home/$NB_USER/.cache/yarn
 
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
@@ -87,7 +93,7 @@ RUN curl -L --retry 3 \
  && chown -R root:root $HADOOP_HOME
 
 # SPARK
-ENV SPARK_VERSION 2.4.1
+ENV SPARK_VERSION 2.4.4
 ENV SPARK_PACKAGE spark-${SPARK_VERSION}-bin-without-hadoop
 ENV SPARK_HOME /usr/spark-${SPARK_VERSION}
 ENV SPARK_DIST_CLASSPATH="$HADOOP_HOME/etc/hadoop/*:$HADOOP_HOME/share/hadoop/common/lib/*:$HADOOP_HOME/share/hadoop/common/*:$HADOOP_HOME/share/hadoop/hdfs/*:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/hdfs/*:$HADOOP_HOME/share/hadoop/yarn/lib/*:$HADOOP_HOME/share/hadoop/yarn/*:$HADOOP_HOME/share/hadoop/mapreduce/lib/*:$HADOOP_HOME/share/hadoop/mapreduce/*"
