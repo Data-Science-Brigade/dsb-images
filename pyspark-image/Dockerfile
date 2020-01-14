@@ -107,4 +107,4 @@ RUN curl -L --retry 3 \
 
 WORKDIR $SPARK_HOME
 
-CMD ["bin/spark-class", "org.apache.spark.deploy.master.Master"]
+CMD ["/usr/spark-2.4.4/bin/spark-class", "org.apache.spark.deploy.master.Master"]
