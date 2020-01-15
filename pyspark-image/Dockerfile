@@ -11,15 +11,13 @@ RUN apt-get update --fix-missing && \
     netcat \
     curl \
     bzip2 \
-    python3 \
+    python-dev \
     python3-setuptools \
     unzip \
     vim \
     zip \
     openjdk-8-jre \
     && dpkg-reconfigure -f noninteractive locales \
-    && ln -s /usr/bin/python3 /usr/bin/python \
-    && easy_install3 pip py4j \
     && locale-gen C.UTF-8 \
     && /usr/sbin/update-locale LANG=C.UTF-8 \
     && echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
@@ -54,6 +52,7 @@ LANG=en_US.UTF-8 \
 LANGUAGE=en_US.UTF-8
 
 ENV PATH=$CONDA_DIR/bin:$PATH
+ARG PYTHON_VERSION=default
 
 ENV MINICONDA_VERSION=4.7.10 \
     MINICONDA_MD5=1c945f2b3335c7b2b15130b1b2dc5cf4 \
@@ -73,9 +72,6 @@ RUN cd /tmp && \
     $CONDA_DIR/bin/conda update --all --quiet --yes && \
     conda clean --all -f -y && \
     rm -rf /home/$NB_USER/.cache/yarn
-
-COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
 
 # copy ssh config
 ADD conf/ssh/ssh_config /root/.ssh/config
@@ -104,6 +100,16 @@ RUN curl -L --retry 3 \
   | tar x -C /usr/ \
  && mv /usr/$SPARK_PACKAGE $SPARK_HOME \
  && chown -R root:root $SPARK_HOME
+
+RUN conda install --quiet --yes \
+  'conda-forge::blas=*=openblas' \
+  'cython=0.29*' \
+  'pip=19.3*' \
+  'ipython=7.11.1' && \
+  conda clean --all -f -y
+
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 WORKDIR $SPARK_HOME
 
