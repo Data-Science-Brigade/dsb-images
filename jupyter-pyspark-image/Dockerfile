@@ -70,6 +70,7 @@ ENV PATH=$CONDA_DIR/bin:$PATH \
 
 # Add a script that we will use to correct permissions after running certain commands
 ADD fix-permissions /usr/local/bin/fix-permissions
+RUN chmod a+rx /usr/local/bin/fix-permissions
 
 # Enable prompt color in the skeleton .bashrc before creating the default NB_USER
 RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /etc/skel/.bashrc
@@ -88,27 +89,30 @@ RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
 
 USER $NB_UID
 WORKDIR $HOME
+ARG PYTHON_VERSION=default
 
 # Setup work directory for backward-compatibility
 RUN mkdir /home/$NB_USER/work && \
     fix-permissions /home/$NB_USER
 
 # Install conda as jovyan and check the md5 sum provided on the download site
-ENV MINICONDA_VERSION=4.6.14 \
-    CONDA_VERSION=4.7.10
+ENV MINICONDA_VERSION=4.7.10 \
+    MINICONDA_MD5=1c945f2b3335c7b2b15130b1b2dc5cf4 \
+    CONDA_VERSION=4.7.12
 
 RUN cd /tmp && \
     wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-    echo "718259965f234088d785cad1fbd7de03 *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+    echo "${MINICONDA_MD5} *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
     /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
     rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
     echo "conda ${CONDA_VERSION}" >> $CONDA_DIR/conda-meta/pinned && \
     $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
     $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
     $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
+    if [ ! $PYTHON_VERSION = 'default' ]; then conda install --yes python=$PYTHON_VERSION; fi && \
+    conda list python | grep '^python ' | tr -s ' ' | cut -d '.' -f 1,2 | sed 's/$/.*/' >> $CONDA_DIR/conda-meta/pinned && \
     $CONDA_DIR/bin/conda install --quiet --yes conda && \
     $CONDA_DIR/bin/conda update --all --quiet --yes && \
-    conda list python | grep '^python ' | tr -s ' ' | cut -d '.' -f 1,2 | sed 's/$/.*/' >> $CONDA_DIR/conda-meta/pinned && \
     conda clean --all -f -y && \
     rm -rf /home/$NB_USER/.cache/yarn && \
     fix-permissions $CONDA_DIR && \
@@ -130,7 +134,9 @@ RUN conda install --quiet --yes 'tini=0.18.0' && \
 RUN conda install --quiet --yes \
     'notebook=6.0.0' \
     'jupyterhub=1.0.0' \
-    'jupyterlab=1.1.3' && \
+    'jupyterlab=1.2.1' \
+    'nbconvert=5.6*' \
+    'tornado=5.1.1' && \
     conda clean --all -f -y && \
     npm cache clean --force && \
     jupyter notebook --generate-config && \
@@ -141,32 +147,10 @@ RUN conda install --quiet --yes \
 
 # Install Python 3 packages
 RUN conda install --quiet --yes \
-    'beautifulsoup4=4.8.*' \
     'conda-forge::blas=*=openblas' \
-    'bokeh=1.3*' \
-    'cloudpickle=1.2*' \
     'cython=0.29*' \
-    'dask=2.2.*' \
-    'dill=0.3*' \
-    'h5py=2.9*' \
-    'hdf5=1.10*' \
-    'ipywidgets=7.5*' \
     'matplotlib-base=3.1.*' \
-    'numba=0.45*' \
-    'numexpr=2.6*' \
-    'pandas=0.25*' \
-    'patsy=0.5*' \
-    'protobuf=3.9.*' \
-    'scikit-image=0.15*' \
-    'scikit-learn=0.21*' \
-    'scipy=1.3*' \
-    'seaborn=0.9*' \
-    'sqlalchemy=1.3*' \
-    'statsmodels=0.10*' \
-    'sympy=1.4*' \
-    'vincent=0.4.*' \
-    'xlrd' \
-    'pyarrow' \
+    'ipywidgets=7.5*' \
     && \
     conda clean --all -f -y && \
     # Activate ipywidgets extension in the environment that runs the notebook server
@@ -174,9 +158,9 @@ RUN conda install --quiet --yes \
     # Also activate ipywidgets extension for JupyterLab
     # Check this URL for most recent compatibilities
     # https://github.com/jupyter-widgets/ipywidgets/tree/master/packages/jupyterlab-manager
-    jupyter labextension install @jupyter-widgets/jupyterlab-manager@1.0.1 --no-build && \
+    jupyter labextension install @jupyter-widgets/jupyterlab-manager@^1.0.1 --no-build && \
     jupyter labextension install jupyterlab_bokeh@1.0.0 --no-build && \
-    jupyter lab build --dev-build=False && \
+    jupyter lab build && \
     npm cache clean --force && \
     rm -rf $CONDA_DIR/share/jupyter/lab/staging && \
     rm -rf /home/$NB_USER/.cache/yarn && \
@@ -203,13 +187,6 @@ RUN MPLBACKEND=Agg python -c "import matplotlib.pyplot" && \
 ENTRYPOINT ["tini", "-g", "--"]
 CMD ["start-notebook.sh"]
 
-# Solve incompatibility problems with the version of Tornado and Jupyter Spark
-RUN pip uninstall -y tornado nbconvert jupyter-spark && \
-  pip install dask==2.9.1 && \
-  pip install nbconvert==5.1.0 && \
-  pip install tornado==5.1.1 && \
-  pip install jupyter-spark
-
 # Fix permissions on /etc/jupyter as root
 USER root
 
@@ -222,12 +199,13 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN cd /tmp && \
-    wget http://mirrors.ukfast.co.uk/sites/ftp.apache.org/spark/spark-${APACHE_SPARK_VERSION}/spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
+    wget -q http://mirrors.ukfast.co.uk/sites/ftp.apache.org/spark/spark-${APACHE_SPARK_VERSION}/spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
+    echo "2E3A5C853B9F28C7D4525C0ADCB0D971B73AD47D5CCE138C85335B9F53A6519540D3923CB0B5CEE41E386E49AE8A409A51AB7194BA11A254E037A848D0C4A9E5 *spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz" | sha512sum -c - && \
     tar xzf spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz -C /usr/local --owner root --group root --no-same-owner && \
     rm spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
 RUN cd /usr/local && ln -s spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} spark
 
-# Spark and Mesos config
+# Spark config
 ENV SPARK_HOME /usr/local/spark
 ENV PYTHONPATH $SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.7-src.zip
 ENV SPARK_OPTS --driver-java-options=-Xms1024M --driver-java-options=-Xmx4096M --driver-java-options=-Dlog4j.logLevel=info
@@ -244,9 +222,17 @@ COPY start-notebook.sh /usr/local/bin/
 COPY start-singleuser.sh /usr/local/bin/
 COPY jupyter_notebook_config.py /etc/jupyter/
 
-# Fix permissions on /etc/jupyter as root
-USER root
-RUN fix-permissions /etc/jupyter/
-
 # Switch back to jovyan to avoid accidental container runs as root
 USER $NB_UID
+
+RUN jupyter contrib nbextension install --user
+RUN jupyter nbextensions_configurator enable --user
+RUN jupyter serverextension enable --py jupyter_spark
+RUN jupyter nbextension install --py jupyter_spark --user
+RUN jupyter nbextension enable --py jupyter_spark
+RUN jupyter nbextension enable --py widgetsnbextension
+RUN jupyter nbextension enable execute_time/ExecuteTime
+RUN jupyter nbextension enable codefolding/main
+RUN jupyter nbextension enable codefolding/edit
+RUN jupyter nbextension enable toc2/main
+RUN jupyter nbextension enable collapsible_headings/main
