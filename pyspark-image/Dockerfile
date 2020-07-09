@@ -1,5 +1,5 @@
 FROM debian:stretch
-LABEL maintainer="contato@datasciencebr.com"
+LABEL maintainer="hello@dsbrigade.com"
 LABEL inspired_by="https://github.com/gettyimages"
 
 RUN apt-get update --fix-missing && \
