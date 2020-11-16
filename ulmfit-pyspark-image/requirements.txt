@@ -1,0 +1,25 @@
+# Bibliotecas da API
+fastapi==0.60.1
+requests==2.24.0
+uvicorn==0.11.7
+pyspark==2.4.0
+
+# Bibliotecas Genéricas
+pandas==1.0.1
+scipy>=1.4.0,<1.5.0
+
+# Bibliotecas de I/O
+hdfs==2.5.8
+textract==1.6.3
+
+# Bibliotecas para o modelo
+sentencepiece>=0.1.91,<0.2.0
+fastai>=1.0.61,<1.1.0
+stanza>=1.1.1,<1.2.0
+
+# Bibliotecas de teste e documentação
+pdoc3==0.9.1
+loguru==0.5.1
+stackprinter==0.2.4
+pytest==6.0.1
+ipdb==0.12
