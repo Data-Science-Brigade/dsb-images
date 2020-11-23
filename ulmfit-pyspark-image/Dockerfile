@@ -63,6 +63,11 @@ RUN python3 -c 'from fastai.datasets import URLs, untar_data;\
 
 USER hdfs
 
+RUN python3 -c 'import stanza;\
+                stanza.download("pt", processors="tokenize,pos,mwt,lemma");'
+RUN python3 -c 'from fastai.datasets import URLs, untar_data;\
+                untar_data(URLs.WT103_FWD, data=False);'
+
 EXPOSE 5000
 EXPOSE 4040
 
