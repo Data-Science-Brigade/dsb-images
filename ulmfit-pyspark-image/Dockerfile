@@ -47,9 +47,6 @@ RUN ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa \
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
 # Textract dependencies
 RUN apt update && apt install -y libxml2-dev libxslt1-dev \
   antiword unrtf poppler-utils pstotext tesseract-ocr \
@@ -58,6 +55,11 @@ RUN apt update && apt install -y libxml2-dev libxslt1-dev \
 # LIBREOFFICE
 RUN apt install -y libreoffice libreoffice-writer \
   ure libreoffice-java-common libreoffice-core libreoffice-common
+
+RUN python3 -c 'import stanza;\
+                stanza.download("pt", processors="tokenize,pos,mwt,lemma");'
+RUN python3 -c 'from fastai.datasets import URLs, untar_data;\
+                untar_data(URLs.WT103_FWD, data=False);'
 
 USER hdfs
 
@@ -69,5 +71,4 @@ RUN python3 -c 'from fastai.datasets import URLs, untar_data;\
 EXPOSE 5000
 EXPOSE 4040
 
-ENTRYPOINT ["entrypoint.sh"]
 CMD ["uvicorn", "--reload", "--host", "0.0.0.0", "--port", "5000", "api:app"]
