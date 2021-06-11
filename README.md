@@ -13,7 +13,7 @@ A place to maintain Docker images we use across projects
 2. Build the image tagging it with its final name:
 
   ```
-  docker build -t <hub-user>/<repo-name>[:<tag>]
+  docker build -t <hub-user>/<repo-name>[:<tag>] .
   ```
 
 For example:
