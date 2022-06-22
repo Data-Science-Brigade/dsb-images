@@ -1,6 +1,6 @@
 ipdb==0.10.3
 joblib==0.14.1
-numpy==1.18.1
+numpy==1.22.0
 pandas==0.25.3
 pyarrow==0.15.1
 scipy==1.4.1
