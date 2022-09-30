@@ -1,6 +1,6 @@
 # Bibliotecas Python
 numpy==1.18.1
-joblib==0.14.1
+joblib==1.2.0
 pyspark==2.4.4
 spark-stratifier
 plotnine
