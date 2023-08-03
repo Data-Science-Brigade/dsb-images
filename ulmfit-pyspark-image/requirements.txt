@@ -19,7 +19,7 @@ stanza>=1.1.1,<1.2.0
 
 # Bibliotecas de teste e documentação
 pdoc3==0.9.1
-loguru==0.5.1
+loguru==0.5.3
 stackprinter==0.2.4
 pytest==6.0.1
 ipdb==0.12
